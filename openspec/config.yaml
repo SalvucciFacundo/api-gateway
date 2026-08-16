@@ -1,0 +1,39 @@
+schema: spec-driven
+
+context: |
+  Project: API Gateway (auth + rate limiting + observability)
+  Stack: Go 1.26 stdlib (net/http) + Chi router, JWT (golang-jwt), Prometheus client, slog
+  Frontend: React (Vite) embedded via embed.FS
+  Deploy: Docker multi-stage, Dokploy
+  Testing: go test (strict TDD), npm for frontend
+  Architecture: Hexagonal / Screaming Architecture — middleware-centric
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Document concurrency implications for shared state (rate limiter buckets, mutexes)
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Specify HTTP status codes and response schemas explicitly
+  design:
+    - Include sequence diagrams for auth flow and rate limiting
+    - Document middleware chain order and error propagation
+    - Explain concurrency safety for in-memory structures
+  tasks:
+    - Group by phase: core middleware → auth → rate limiting → observability → frontend → deploy
+    - Keep tasks completable in one session
+  apply:
+    guidelines:
+      - Follow Go stdlib patterns and Chi idioms
+      - Use slog for all logging (structured, leveled)
+      - Use embed.FS for frontend assets
+      - Middleware must be independently testable with httptest
+    tdd: true
+    test_command: "go test ./..."
+  verify:
+    test_command: "go test ./..."
+    build_command: "go build ./cmd/gateway"
+    coverage_threshold: 80
+  archive:
+    - Warn before merging destructive deltas

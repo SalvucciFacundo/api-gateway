@@ -1,0 +1,43 @@
+Proyecto 1 — API Gateway (auth + rate limiting + observabilidad)
+
+**Qué demuestra:** que entendés el stack HTTP de producción real. Autenticación JWT, rate limiting,
+middleware, logging estructurado, métricas. No es un CRUD: es la capa por la que pasa TODO el tráfico.
+
+**Stack:** Go stdlib (`net/http`) o Chi + JWT (golang-jwt) + Prometheus client + slog. Sin DB pesada
+(solo users para login, puede ser en memoria al inicio o Postgres compartido).
+
+**Frontend React (integrado):** mini panel de auth — pantalla de login/register que consume
+`/auth/*`, y un "API explorer" que muestra en vivo: tu token JWT, los rate limits consumidos por
+endpoint (barras por bucket) y el estado de salud. Nada de demo data: son las métricas reales del
+gateway. Es la demo visual de que el middleware funciona.
+
+**Endpoints base:**
+- `POST /api/v1/auth/register` — crea usuario + bcrypt
+- `POST /api/v1/auth/login` — emite JWT (access/refresh)
+- `GET /api/v1/users/me` — protegido por JWT middleware
+- `GET /metrics` — Prometheus (sin auth, scrape interno)
+- `GET /healthz` — health check
+
+**Middleware a implementar (el corazón del proyecto):**
+1. **Auth JWT** — validar firma, expiración, claims
+2. **Rate limiting** — token bucket por IP y por usuario (in-memory con mutex; Redis como mejora)
+3. **Logging estructurado** — request ID, método, path, status, duración, trace
+4. **Métricas** — contadores por endpoint/status, histogramas de latencia
+
+**Concurrencia que se ejercita:** mutex para los buckets del rate limiter, pool de HTTP server
+configurado bien (`ReadTimeout`, `IdleTimeout`), graceful shutdown.
+
+**Deploy en Dokploy:**
+- Application → repo del gateway → Dockerfile → rama main → env `JWT_SECRET`
+- Puerto contenedor `8080`
+
+**Criterio "listo para demo":**
+- `docker compose up` local con un solo comando
+- `curl` de login → token → endpoint protegido → 429 tras exceder rate limit
+- `/metrics` respondiendo y con métricas reales tras un par de requests
+- README + diagrama + demo live
+
+**Mejoras opcionales (después de la base):** refresh token con rotación, CORS real,
+resoluciones de limit por plan (free/premium), test de integración con `httptest`.
+
+---
