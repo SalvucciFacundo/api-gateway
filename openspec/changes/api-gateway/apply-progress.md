@@ -63,7 +63,7 @@ packages (model 100%, store 89.2%). `go build ./...` compiles.
 |---|---|
 | Focused test command and exact result | `go test ./internal/model/... ./internal/store/... -race` → `ok` (both packages, 0 failures, race detector clean) |
 | Runtime harness command/scenario and exact result | `go build ./...` → exit 0. `go vet ./...` → exit 0. `gofmt -l .` → no output. Runtime server boundary is N/A: no server/main exists until PR5. |
-| Rollback boundary | `git revert` of commits `b17efe1..dd14458` (or delete `internal/model/*`, `internal/store/*`, restore `go.mod`/`go.sum`) — removes only T1–T7, no unrelated work. |
+| Rollback boundary | Revert the PR1 commits `19eaed2..4c7c52f` (`feat(model)/feat(store)` + go.mod), or delete `internal/model/*`, `internal/store/*` and restore `go.mod`/`go.sum` — removes only T1–T7, no unrelated work. |
 
 ## Deviations from Design
 
