@@ -88,3 +88,10 @@ func (s *MemoryStore) GetByID(ctx context.Context, id string) (*model.User, erro
 	}
 	return user, nil
 }
+
+// Ping reports that the in-memory store is always operational. A swapped-in
+// remote store (e.g. Postgres) would return an error when unreachable, which
+// the readiness probe surfaces as 503.
+func (s *MemoryStore) Ping(ctx context.Context) error {
+	return nil
+}

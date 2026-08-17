@@ -42,30 +42,30 @@ STRICT TDD: write failing test (RED) before each production task; triangulate; r
 
 ## Phase 2: Auth Core (T8–T9)
 
-- [ ] T8: `internal/service/auth.go` + test — `AuthService{store,jwtSecret,bcryptCost:12}`; Register/Login/Refresh/GetUser/generateToken. ✅ JWT-AUTH-001..003,005,008.
-- [ ] T9: `internal/middleware/auth.go` + test — `Auth(jwtSecret)`: Bearer→validate sig/exp/iss→sub in ctx; 401. ✅ JWT-AUTH-004/005.
+- [x] T8: `internal/service/auth.go` + test — `AuthService{store,jwtSecret,bcryptCost:12}`; Register/Login/Refresh/GetUser/generateToken. ✅ JWT-AUTH-001..003,005,008.
+- [x] T9: `internal/middleware/auth.go` + test — `Auth(jwtSecret)`: Bearer→validate sig/exp/iss→sub in ctx; 401. ✅ JWT-AUTH-004/005.
 
 ## Phase 3: Middleware — Observability + Rate Limiting (T10–T13)
 
-- [ ] T10: `internal/middleware/requestid.go` + test — UUID v4 gen/propagate via X-Request-ID. ✅ LOG-002/003/006.
-- [ ] T11: `internal/middleware/logging.go` + test — slog JSON: method/path/status/duration_ms/request_id. ✅ LOG-001/004.
-- [ ] T12: `internal/middleware/metrics.go` + test — counter + histogram + status-capturing responseWriter. ✅ METRICS-001/002/005.
-- [ ] T13: `internal/middleware/ratelimit.go` + test — RateLimiter Allow/GetBucket/Cleanup/StartCleanup; keys ip:/user:/endpoint:login:. ✅ RATE-001..004,006..008.
+- [x] T10: `internal/middleware/requestid.go` + test — UUID v4 gen/propagate via X-Request-ID. ✅ LOG-002/003/006.
+- [x] T11: `internal/middleware/logging.go` + test — slog JSON: method/path/status/duration_ms/request_id. ✅ LOG-004 (LOG-001 JSON handler deferred to server wiring T18).
+- [x] T12: `internal/middleware/metrics.go` + test — counter + histogram + status-capturing responseWriter. ✅ METRICS-001/002/005.
+- [x] T13: `internal/middleware/ratelimit.go` + test — RateLimiter Allow/GetBucket/Cleanup/StartCleanup; keys ip:/user:/endpoint:login:. ✅ RATE-001..004,006..008.
 
 ## Phase 4: HTTP Layer + Wiring (T14–T19)
 
-- [ ] T14: `internal/handler/auth.go`+`users.go` + test — Register/Login/Refresh/GetCurrentUser. ✅ 201/409/200/401 httptest.
-- [ ] T15: `internal/handler/health.go` + test — liveness 200 `{status:"ok"}`; readiness 200/503. ✅ HEALTH-001..004.
-- [ ] T16: `internal/handler/limits.go` + test — `{ip,user}:{limit,remaining,reset}` JSON. ✅ RATE-005.
-- [ ] T17: `internal/handler/spa.go` + test — static assets + index.html fallback. ✅ FE-002/003/004.
-- [ ] T18: `internal/server/server.go` + test — chain requestID→logging→metrics→auth→rateLimit→handler; timeouts; Start/Shutdown. ✅ integration: register→login→me, 429 loop, /metrics.
-- [ ] T19: `cmd/gateway/main.go`+`embed.go` — JWT_SECRET fail-fast; admin seed; graceful shutdown. ✅ JWT-AUTH-007.
+- [x] T14: `internal/handler/auth.go`+`users.go` + test — Register/Login/Refresh/GetCurrentUser. ✅ 201/409/200/401 httptest.
+- [x] T15: `internal/handler/health.go` + test — liveness 200 `{status:"ok"}`; readiness 200/503. ✅ HEALTH-001..004.
+- [x] T16: `internal/handler/limits.go` + test — `{ip,user}:{limit,remaining,reset}` JSON. ✅ RATE-005.
+- [x] T17: `internal/handler/spa.go` + test — static assets + index.html fallback. ✅ FE-002/003/004.
+- [x] T18: `internal/server/server.go` + test — chain requestID→logging→metrics→auth→rateLimit→handler; timeouts; Start/Shutdown. ✅ integration: register→login→me, 429 loop, /metrics.
+- [x] T19: `cmd/gateway/main.go`+`embed.go` — JWT_SECRET fail-fast; admin seed; graceful shutdown. ✅ JWT-AUTH-007.
 
 ## Phase 5: Frontend (T20)
 
-- [ ] T20: `web/` Vite SPA — LoginPage/RegisterPage/ExplorerPage, RateLimitBar, HealthStatus; tokens in localStorage; real API only (no mock). ✅ `npm run build` → `web/dist`; FE-001,005-011.
+- [x] T20: `web/` Vite SPA — LoginPage/RegisterPage/ExplorerPage, RateLimitBar, HealthStatus; tokens in localStorage; real API only (no mock). ✅ `npm run build` → `web/dist`; FE-001,005-011.
 
 ## Phase 6: Packaging + Docs (T21–T22)
 
-- [ ] T21: `Dockerfile`+`docker-compose.yml` — 3-stage build; JWT_SECRET/ADMIN_* env; port 8080. ✅ `docker compose up` → /healthz 200.
-- [ ] T22: `README.md` — architecture diagram, curl demo script, demo creds (admin@example.com/admin1234), localStorage-XSS note. ✅ curl flow works.
+- [x] T21: `Dockerfile`+`docker-compose.yml` — 3-stage build; JWT_SECRET/ADMIN_* env; port 8080. ⚠️ Implementation complete; Docker runtime validation pending because Docker is unavailable.
+- [x] T22: `README.md` — architecture diagram, curl demo script, demo creds (admin@example.com/admin1234), localStorage-XSS note. ✅ Documentation complete; curl flow requires Docker/runtime validation.
