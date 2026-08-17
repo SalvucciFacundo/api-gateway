@@ -1,6 +1,6 @@
 # API Gateway
 
-A self-contained Go HTTP gateway with JWT authentication, rate limiting, structured JSON logs, Prometheus metrics, health probes, and an embedded React frontend. The current store is in memory, so users and the seeded admin are recreated whenever the process starts.
+A self-contained Go HTTP gateway with JWT authentication, rate limiting, structured JSON logs, Prometheus metrics, health probes, and an embedded React frontend. Users persist in PostgreSQL when `DATABASE_URL` is set (migrations run automatically on startup); otherwise the gateway falls back to the in-memory store, so a local quick start needs no database — users and the seeded admin are recreated whenever the process starts in that mode.
 
 ## Quick Start
 
@@ -20,6 +20,8 @@ go run ./cmd/gateway
 
 The gateway listens on `http://localhost:8080` by default. `PORT` can override the port.
 
+Without `DATABASE_URL` the gateway runs entirely in memory. To persist users, set `DATABASE_URL` to a PostgreSQL database (see [PostgreSQL Persistence](#postgresql-persistence)); the embedded migrations are applied automatically at startup.
+
 ## Architecture
 
 ```text
@@ -32,7 +34,7 @@ internal/middleware
 internal/service
   authentication and JWT business logic
 internal/store
-  in-memory user store
+  user store: in-memory MemoryStore by default, PostgreSQL PostgresStore when DATABASE_URL is set
 web
   React/Vite SPA; web/dist is embedded into the Go binary
 ```
@@ -47,8 +49,21 @@ Requests pass through request ID, structured logging, and metrics middleware. Au
 | `ADMIN_EMAIL` | No in Go; required by Compose | `admin@example.com` | Email for the idempotently seeded admin user. |
 | `ADMIN_PASSWORD` | No in Go; required by Compose | `admin1234` | Password for the seeded admin user. |
 | `PORT` | No | `8080` | TCP port on which the gateway listens. |
+| `DATABASE_URL` | No | empty | PostgreSQL connection URL. When set, the gateway uses the `PostgresStore` and runs the embedded goose migrations on startup; when empty, the in-memory store is used. |
 
 Set a strong, unique `JWT_SECRET` and admin password outside development. The Compose file requires all three credential variables so accidental default credentials are not used in a container.
+
+## PostgreSQL Persistence
+
+By default the gateway stores users in memory. Set `DATABASE_URL` to opt into persistent storage; the gateway then creates a `pgx` connection pool, runs the embedded goose migrations (in `internal/store/migrations`), and serves all user operations from PostgreSQL. The `users` table stores `id`, `email` (unique), `password_hash`, and `created_at`. The seeded admin and the readiness probe work identically in both modes.
+
+```bash
+# Local development against a PostgreSQL instance
+export DATABASE_URL='postgres://postgres:postgres@localhost:5432/api_gateway?sslmode=disable'
+go run ./cmd/gateway
+```
+
+Leave `DATABASE_URL` unset to keep the zero-dependency in-memory quick start. The in-memory store remains the fallback in every configuration that omits `DATABASE_URL`.
 
 ## API Demo
 
@@ -107,7 +122,17 @@ curl -s http://localhost:8080/metrics
 
 ## Docker
 
-The multi-stage Dockerfile builds the React assets, embeds them into a statically linked Go binary, and runs it as a non-root user. Compose exposes port 8080, validates the required credentials, uses a read-only root filesystem, and checks `/healthz`.
+The multi-stage Dockerfile builds the React assets, embeds them into a statically linked Go binary, and runs it as a non-root user. Compose also starts a PostgreSQL service (named volume, `pg_isready` healthcheck) and makes the gateway wait for it to be healthy before starting. The gateway remains a single application container: the SPA is embedded in the binary and migrations run at startup inside that container, so no separate frontend or migration job is needed.
+
+```bash
+export JWT_SECRET='replace-with-a-long-random-secret'
+export ADMIN_EMAIL='admin@example.com'
+export ADMIN_PASSWORD='change-this-development-password'
+
+docker compose up --build
+```
+
+Compose sets `DATABASE_URL` to the Postgres service URL by default; override it with `DATABASE_URL=...` when connecting to another database. Compose exposes port 8080, validates the required credentials, uses a read-only root filesystem, and checks `/healthz`.
 
 ```bash
 export JWT_SECRET='replace-with-a-long-random-secret'
@@ -138,4 +163,4 @@ go test ./...
 cd web && npm run build
 ```
 
-The Go tests cover the in-memory store, services, middleware, handlers, server wiring, and embedded frontend. The frontend build verifies TypeScript and Vite output.
+The Go tests cover the in-memory store, services, middleware, handlers, server wiring, and embedded frontend. The Postgres store integration tests are skipped unless `TEST_DATABASE_URL` is set, so the default suite runs without a database. The frontend build verifies TypeScript and Vite output.

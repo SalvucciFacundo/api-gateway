@@ -17,13 +17,15 @@ func TestLoadConfigMissingJWTSecret(t *testing.T) {
 }
 
 // TestLoadConfigReadsValues verifies loadConfig reads JWT_SECRET and the
-// optional PORT/ADMIN_EMAIL/ADMIN_PASSWORD values from the environment.
+// optional PORT/ADMIN_EMAIL/ADMIN_PASSWORD/DATABASE_URL values from the
+// environment.
 func TestLoadConfigReadsValues(t *testing.T) {
 	cfg, err := loadConfig(envMap(map[string]string{
 		"JWT_SECRET":     "super-secret",
 		"PORT":           "9090",
 		"ADMIN_EMAIL":    "admin@example.org",
 		"ADMIN_PASSWORD": "s3cret-pass",
+		"DATABASE_URL":   "postgres://user:pass@db:5432/gateway?sslmode=disable",
 	}))
 	if err != nil {
 		t.Fatalf("loadConfig: %v", err)
@@ -39,6 +41,9 @@ func TestLoadConfigReadsValues(t *testing.T) {
 	}
 	if cfg.AdminPassword != "s3cret-pass" {
 		t.Errorf("AdminPassword = %q, want s3cret-pass", cfg.AdminPassword)
+	}
+	if cfg.DatabaseURL != "postgres://user:pass@db:5432/gateway?sslmode=disable" {
+		t.Errorf("DatabaseURL = %q, want the configured postgres URL", cfg.DatabaseURL)
 	}
 }
 
@@ -60,5 +65,8 @@ func TestLoadConfigDefaults(t *testing.T) {
 	}
 	if cfg.BcryptCost != 12 {
 		t.Errorf("BcryptCost = %d, want 12", cfg.BcryptCost)
+	}
+	if cfg.DatabaseURL != "" {
+		t.Errorf("DatabaseURL = %q, want empty default (in-memory store)", cfg.DatabaseURL)
 	}
 }

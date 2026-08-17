@@ -1,6 +1,7 @@
 // Command gateway is the API Gateway entrypoint. It wires configuration, the
-// in-memory store (with a seeded admin), the embedded SPA assets, and the HTTP
-// server, then runs until SIGINT/SIGTERM with a graceful shutdown.
+// user store (in-memory or PostgreSQL when DATABASE_URL is set, with a seeded
+// admin), the embedded SPA assets, and the HTTP server, then runs until
+// SIGINT/SIGTERM with a graceful shutdown.
 package main
 
 import (
@@ -24,6 +25,9 @@ type config struct {
 	AdminEmail    string
 	AdminPassword string
 	BcryptCost    int
+	// DatabaseURL, when non-empty, selects the PostgreSQL store; empty keeps
+	// the in-memory store so the gateway runs without a database.
+	DatabaseURL string
 }
 
 // default values used when the corresponding environment variable is unset.
@@ -64,6 +68,7 @@ func loadConfig(getenv func(string) string) (config, error) {
 		AdminEmail:    adminEmail,
 		AdminPassword: adminPassword,
 		BcryptCost:    defaultBcryptCost,
+		DatabaseURL:   getenv("DATABASE_URL"),
 	}, nil
 }
 
@@ -91,8 +96,24 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 
-	st := store.NewMemoryStore()
-	if _, err := store.SeedAdmin(context.Background(), st, cfg.AdminEmail, cfg.AdminPassword, cfg.BcryptCost); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	var st store.Store
+	if cfg.DatabaseURL != "" {
+		pgStore, err := store.NewPostgresStore(ctx, cfg.DatabaseURL)
+		if err != nil {
+			return err
+		}
+		defer pgStore.Close()
+		st = pgStore
+		logger.Info("gateway using postgres store")
+	} else {
+		st = store.NewMemoryStore()
+		logger.Info("gateway using in-memory store")
+	}
+
+	if _, err := store.SeedAdmin(ctx, st, cfg.AdminEmail, cfg.AdminPassword, cfg.BcryptCost); err != nil {
 		return err
 	}
 
@@ -108,9 +129,6 @@ func run(logger *slog.Logger) error {
 		StaticFS:  assets,
 		Store:     st,
 	})
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	logger.Info("gateway starting", "port", cfg.Port)
 	if err := srv.Start(ctx); err != nil {
