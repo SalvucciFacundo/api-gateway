@@ -1,0 +1,24 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: api-gateway:local
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    environment:
+      PORT: "${PORT:-8080}"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET must be set}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:?ADMIN_EMAIL must be set}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://127.0.0.1:$${PORT:-8080}/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

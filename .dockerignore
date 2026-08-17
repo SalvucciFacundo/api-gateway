@@ -1,0 +1,6 @@
+.git
+.atl
+openspec
+web/node_modules
+web/dist
+*.log
