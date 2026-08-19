@@ -6,6 +6,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"time"
 
 	"github.com/SalvucciFacundo/api-gateway/internal/model"
@@ -75,7 +76,15 @@ func migrate(ctx context.Context, url string) error {
 	}
 	defer db.Close()
 
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, migrationsFS)
+	// The embedded FS stores files under migrations/; goose only globs the
+	// *root* of the given fs (fs.Sub), so we must expose the migrations
+	// directory as the root — otherwise it finds zero sources and the app
+	// exits with "no migrations found".
+	migrationFS, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		return err
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, migrationFS)
 	if err != nil {
 		return err
 	}
