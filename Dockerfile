@@ -7,7 +7,10 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM golang:1.26.5-bookworm AS go-build
+# alpine (not bookworm) keeps the build stage lean — ~3x smaller pull and far
+# less docker cache/disk pressure on the shared instance. CGO_ENABLED=0 yields
+# the same static binary, so the runtime stage is unaffected.
+FROM golang:1.26.5-alpine AS go-build
 
 WORKDIR /src
 ARG TARGETOS
