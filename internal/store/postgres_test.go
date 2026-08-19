@@ -2,15 +2,44 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"io/fs"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/SalvucciFacundo/api-gateway/internal/model"
 	"github.com/google/uuid"
+	"github.com/pressly/goose/v3"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// TestEmbeddedMigrationsDiscoverable verifies goose finds the embedded
+// migrations under the "migrations" path (the provider must be pointed at it —
+// scanning the FS root yields zero sources → "no migrations found" on startup).
+func TestEmbeddedMigrationsDiscoverable(t *testing.T) {
+	// sql.Open is lazy: it doesn't connect until used, so no live DB is needed
+	// to construct the provider and list sources from the embedded FS.
+	db, err := sql.Open("pgx", "postgres://invalid:invalid@127.0.0.1:1/nodb?sslmode=disable")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+
+	migrationFS, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatalf("fs.Sub: %v", err)
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, migrationFS)
+	if err != nil {
+		t.Fatalf("goose.NewProvider: %v", err)
+	}
+	if sources := provider.ListSources(); len(sources) == 0 {
+		t.Fatal("expected embedded migrations under migrations/, got zero sources")
+	}
+}
 
 // newPostgresStore connects to the TEST_DATABASE_URL database and applies the
 // embedded migrations. It skips the test when the variable is unset so the
